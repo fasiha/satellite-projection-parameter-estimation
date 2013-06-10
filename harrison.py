@@ -1,4 +1,6 @@
 import numpy as np
+import scipy.linalg as la
+import scipy.optimize as opt
 
 def vertical_satellite_forward(R, P, phi1, lambda0, phi, lam):
     cos_c = (np.sin(phi1)*np.sin(phi)
@@ -77,3 +79,80 @@ def tilted_satellite_forward(R, P, phi1, lambda0, omega, gamma, phi, lam):
     xt = np.cos(omega) / A * (x*np.cos(gamma) - y*np.sin(gamma))
     yt = (y*np.cos(gamma) + x*np.sin(gamma)) / A
     return (xt, yt)
+
+def scale_to_page(xy, mx, my, bx, by):
+    return np.hstack((mx*xy[:,:1]+bx, my*xy[:,1:]+by))
+
+
+def str2longlat(s):
+    x = s.lower()
+    x = float(x.rstrip('wens')) * (
+        -1 if (x.find('s')>=0 or x.find('w')>=0)
+        else 1)
+    return x
+
+def loaddata(fname="data.csv"):
+    return np.array([(str2longlat(lo), str2longlat(lat),
+                      float(x), float(y))
+              for (lo,lat,x,y)
+              in np.genfromtxt(fname, skip_header=1,
+                               dtype=str, delimiter=',')])
+
+
+
+def paramfn(params, data, fixedR=False, returnerr=True):
+    if fixedR:
+        P, phi1, lambda0, omega,gamma, mx, bx, my, by = params
+        R = 1.0
+    else:
+        (R, P, phi1, lambda0, omega,gamma, mx, bx, my, by) = params
+    xy = np.array([tilted_satellite_forward(R,P,phi1,lambda0,omega,gamma,
+                                            phi,lam)
+                   for (lam,phi) in data[:,:2]])
+    pixel = scale_to_page(xy, mx, my, bx, by)
+    if returnerr:
+        return (pixel - data[:,2:]).ravel()
+    else:
+        return pixel
+
+def paramprinter(x, fixedR=False):
+    if fixedR:
+        P, phi1, lambda0, omega, gamma, mx, bx, my, by = x
+        R = 1.0
+    else:
+        R, P, phi1, lambda0, omega, gamma, mx, bx, my, by = x
+    # P = 1.0 + H/R
+    print "R = %g, P = %g (-> H = %g)" % (R, P, (P-1.0)*R)
+    print "lat/long: (%g, %g) deg" % tuple(np.rad2deg([phi1, lambda0]))
+    print "tilt/rot: (%g, %g) deg" % tuple(np.rad2deg([omega, gamma]))
+    print "x scaling: pixelx = %g*x + %g" % (mx,bx)
+    print "y scaling: pixely = %g*y + %g" % (my,by)
+
+if __name__ == '__main__':
+    data = loaddata(fname='data.csv')
+    paramfn([0.1]*10,data)
+
+    R = 1.0
+    P = 1.1
+    phi1 = np.deg2rad(-26.0)
+    lambda0 = np.deg2rad(-49.0)
+    omega = np.deg2rad(20.0)
+    gamma = np.deg2rad(-90.0)
+    mx = 1/1000.0
+    bx = 0.0
+    my = 1/1000.0
+    by = 0.0
+    fixedR = True
+    if fixedR:
+        init = [P, phi1, lambda0, omega, gamma, mx, bx, my, by]
+    else:
+        init = [R, P, phi1, lambda0, omega, gamma, mx, bx, my, by]
+    solution, cov_sol, infodict, mesg, ier = opt.leastsq(
+        lambda x: paramfn(x, data, fixedR), init,
+        full_output=True, maxfev=11*1000,
+        diag=([1.0]*(5 if fixedR else 6) + [1/100.0, 1/1000., 1/100.0, 1/1000.]),
+        ftol=1e-10, xtol=1e-10)
+    print ("Initial error (%g) -> final error (%g): solution:"
+           % tuple(map(lambda x: la.norm(paramfn(x, data, fixedR)),
+                       [init, solution])))
+    paramprinter(solution, fixedR)
