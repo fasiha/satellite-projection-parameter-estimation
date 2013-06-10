@@ -130,7 +130,6 @@ def paramprinter(x, fixedR=False):
 
 if __name__ == '__main__':
     data = loaddata(fname='data.csv')
-    paramfn([0.1]*10,data)
 
     R = 1.0
     P = 1.1
@@ -138,10 +137,10 @@ if __name__ == '__main__':
     lambda0 = np.deg2rad(-49.0)
     omega = np.deg2rad(20.0)
     gamma = np.deg2rad(-90.0)
-    mx = 1/1000.0
-    bx = 0.0
-    my = 1/1000.0
-    by = 0.0
+    mx = 1000.0
+    bx = 5000.0
+    my = 1000.0
+    by = 3000.0
     fixedR = True
     if fixedR:
         init = [P, phi1, lambda0, omega, gamma, mx, bx, my, by]
@@ -150,7 +149,7 @@ if __name__ == '__main__':
     solution, cov_sol, infodict, mesg, ier = opt.leastsq(
         lambda x: paramfn(x, data, fixedR), init,
         full_output=True, maxfev=11*1000,
-        diag=([1.0]*(5 if fixedR else 6) + [1/100.0, 1/1000., 1/100.0, 1/1000.]),
+        diag=([1.0]*(5 if fixedR else 6) + [1/1000.0, 1/1000., 1/1000.0, 1/1000.]),
         ftol=1e-10, xtol=1e-10)
     print ("Initial error (%g) -> final error (%g): solution:"
            % tuple(map(lambda x: la.norm(paramfn(x, data, fixedR)),
