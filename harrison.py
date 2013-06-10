@@ -14,6 +14,7 @@ def vertical_satellite_forward(R, P, phi1, lambda0, phi, lam):
 def percent_error(true, estimated):
     return np.sqrt(np.sum(np.abs(true-estimated)**2)) / np.sqrt(np.sum(true**2))
 def tilted_satellite_forward_test():
+    """Numerical example from page 322 of Snyder."""
     R = 6371e3 # m
     H = 500e3 # m
     phi1 = +39.0 # deg
@@ -63,11 +64,11 @@ def tilted_satellite_forward(R, P, phi1, lambda0, omega, gamma, phi, lam):
     'In terms of a camera in space, the camera is placed at a distance
     RP from the center of the Earth, perpendicularly over point (phi1,
     lambda0). The camera is horizontally turned to face gamma
-    clockwise from north, and then tilted (90°-omega) downward from
-    horizontal, "horizontal" meaning parallel to a plane tangent to
-    the sphere at (phi1, lambda0). The photograph is then taken,
-    placing points (phi, lam) in positions (xt, yt), based on a scale
-    reduction in R.'
+    clockwise from north, and then tilted (90 degrees - omega)
+    downward from horizontal, "horizontal"" meaning parallel to a
+    plane tangent to the sphere at (phi1, lambda0). The photograph is
+    then taken, placing points (phi, lam) in positions (xt, yt), based
+    on a scale reduction in R.'
 
     """
     (x, y) = vertical_satellite_forward(R, P, phi1, lambda0, phi, lam)
