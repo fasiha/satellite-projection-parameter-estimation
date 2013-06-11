@@ -80,9 +80,6 @@ def tilted_satellite_forward(R, P, phi1, lambda0, omega, gamma, phi, lam):
     yt = (y*np.cos(gamma) + x*np.sin(gamma)) / A
     return (xt, yt)
 
-def scale_to_page(xy, mx, my, bx, by):
-    return np.hstack((mx*xy[:,:1]+bx, my*xy[:,1:]+by))
-
 
 def str2longlat(s):
     x = s.lower()
@@ -98,18 +95,27 @@ def loaddata(fname="data.csv"):
               in np.genfromtxt(fname, skip_header=1,
                                dtype=str, delimiter=',')])
 
+def lstsq_slope_intercept(x,y):
+    # Effectively polyfit(x,y,1)---though with fixed linear system
+    (slope, intercept),_,_,_ = la.lstsq(np.hstack((x, np.ones_like(x))), y)
+    return (slope, intercept)
 
+def lstsq_slope_intercept_project(x,y):
+    # effectively polyval with polyfit(x,y,1)
+    m, b = lstsq_slope_intercept(x, y)
+    return m*x + b
 
 def paramfn(params, data, fixedR=False, returnerr=True):
     if fixedR:
-        P, phi1, lambda0, omega,gamma, mx, bx, my, by = params
+        P, phi1, lambda0, omega,gamma = params
         R = 1.0
     else:
-        (R, P, phi1, lambda0, omega,gamma, mx, bx, my, by) = params
+        R, P, phi1, lambda0, omega, gamma = params
     xy = np.array([tilted_satellite_forward(R,P,phi1,lambda0,omega,gamma,
                                             phi,lam)
                    for (phi,lam) in data[:,:2]])
-    pixel = scale_to_page(xy, mx, my, bx, by)
+    pixel = np.hstack((lstsq_slope_intercept_project(xy[:,:1], data[:,2:3]),
+                       lstsq_slope_intercept_project(xy[:,1:], data[:,3:])))
     if returnerr:
         return (pixel - data[:,2:]).ravel()
     else:
@@ -117,16 +123,14 @@ def paramfn(params, data, fixedR=False, returnerr=True):
 
 def paramprinter(x, fixedR=False):
     if fixedR:
-        P, phi1, lambda0, omega, gamma, mx, bx, my, by = x
+        P, phi1, lambda0, omega, gamma = x
         R = 1.0
     else:
-        R, P, phi1, lambda0, omega, gamma, mx, bx, my, by = x
+        R, P, phi1, lambda0, omega, gamma = x
     # P = 1.0 + H/R
     print "R = %g, P = %g (-> H = %g)" % (R, P, (P-1.0)*R)
     print "lat/long: (%g, %g) deg" % tuple(np.rad2deg([phi1, lambda0]))
     print "tilt/rot: (%g, %g) deg" % tuple(np.rad2deg([omega, gamma]))
-    print "x scaling: pixelx = %g*x + %g" % (mx,bx)
-    print "y scaling: pixely = %g*y + %g" % (my,by)
 
 def plottest(data=None):
     # Polar:
@@ -168,13 +172,10 @@ def plottest(data=None):
 
 
 if __name__ == '__main__':
-
     #data = loaddata(fname='data.csv')
     data = loaddata(fname='tributary.csv')
 
     (theopix, theoll) = plottest(data)
-    solx,_,_,_=la.lstsq(np.hstack((theopix[:,:1], np.ones_like(theopix[:,:1]))),  data[:,2:3])
-    soly,_,_,_=la.lstsq(np.hstack((theopix[:,1:], np.ones_like(theopix[:,1:]))),  data[:,3:])
 
     datarad = np.hstack((np.deg2rad(data[:,[1,0]]), data[:,2:]))
     R = 1.0
@@ -183,21 +184,18 @@ if __name__ == '__main__':
     lambda0 = np.deg2rad(26.0) # long
     omega = np.deg2rad(0.0) # tilt
     gamma = np.deg2rad(-99.0) # rot
-    mx = 459.0
-    bx = 307.0 # triburary width:620, height:513.8
-    my = -459.0
-    by = 285.0
     fixedR = True
+
     if fixedR:
-        init = [P, phi1, lambda0, omega, gamma, mx, bx, my, by]
+        init = [P, phi1, lambda0, omega, gamma]
     else:
-        init = [R, P, phi1, lambda0, omega, gamma, mx, bx, my, by]
+        init = [R, P, phi1, lambda0, omega, gamma]
 
     if  True:
         solution, cov_sol, infodict, mesg, ier = opt.leastsq(
             lambda x: paramfn(x, datarad, fixedR), init,
             full_output=True, maxfev=11*1000,
-            diag=([1.0]*(5 if fixedR else 6) + [1/100.0, 1/100., 1/100.0, 1/100.]),
+            diag=([1.0]*(5 if fixedR else 6)),
             ftol=1e-10, xtol=1e-10, factor=.01)
         print ("Initial error (%g) -> final error (%g): solution:"
                % tuple(map(lambda x: la.norm(paramfn(x, datarad, fixedR)),
