@@ -128,7 +128,7 @@ def paramprinter(x, fixedR=False):
     print "x scaling: pixelx = %g*x + %g" % (mx,bx)
     print "y scaling: pixely = %g*y + %g" % (my,by)
 
-def plottest(data):
+def plottest(data=None):
     # Polar:
     #R=1.0; P=9.9; phi1=np.deg2rad(90.0); lambda0=0.0; omega=0.0; gamma=0.0
     #phivec = range(-0,90,10)
@@ -136,10 +136,15 @@ def plottest(data):
 
     R=1.0; P=1.9; phi1=np.deg2rad(49.0); lambda0=np.deg2rad(26.0);
     omega=np.deg2rad(0.0); gamma=np.deg2rad(-99.0)
-    phivec = range(30,91,15)
-    lamvec = range(-30,61,15)
-    phirad = np.deg2rad(np.array(phivec, dtype=float))
-    lamrad = np.deg2rad(np.array(lamvec, dtype=float))
+
+    if data is None:
+        phivec = range(30,91,15)
+        lamvec = range(-30,61,15)
+        phirad = np.deg2rad(np.array(phivec, dtype=float))
+        lamrad = np.deg2rad(np.array(lamvec, dtype=float))
+        latlong = np.array([(phi,lam) for phi in phirad for lam in lamrad])
+    else:
+        latlong = np.array([(lat,lon) for (lon,lat) in np.deg2rad(data[:,:2])])
 
     import pylab
     import matplotlib.pyplot as plt
@@ -148,8 +153,8 @@ def plottest(data):
     ax = fig.add_subplot(111)
     pixels=np.array([tilted_satellite_forward(R,P,phi1,lambda0,omega,gamma,
                                            phi,lam)
-                  for phi in phirad for lam in lamrad])
-    latlong = np.array([(phi,lam) for phi in phirad for lam in lamrad])
+                     for (phi,lam) in latlong])
+
     ax.plot(pixels[:,0], pixels[:,1],'bo')
 
 
@@ -163,9 +168,13 @@ def plottest(data):
 
 
 if __name__ == '__main__':
-    (theopix, theoll) = plottest()
+
     #data = loaddata(fname='data.csv')
     data = loaddata(fname='tributary.csv')
+
+    (theopix, theoll) = plottest(data)
+    solx,_,_,_=la.lstsq(np.hstack((theopix[:,:1], np.ones_like(theopix[:,:1]))),  data[:,2:3])
+    soly,_,_,_=la.lstsq(np.hstack((theopix[:,1:], np.ones_like(theopix[:,1:]))),  data[:,3:])
 
     datarad = np.hstack((np.deg2rad(data[:,[1,0]]), data[:,2:]))
     R = 1.0
@@ -175,22 +184,22 @@ if __name__ == '__main__':
     omega = np.deg2rad(0.0) # tilt
     gamma = np.deg2rad(-99.0) # rot
     mx = 459.0
-    bx = 310.0 # triburary width:620, height:513.8
-    my = 459.0
-    by = 257.0
+    bx = 307.0 # triburary width:620, height:513.8
+    my = -459.0
+    by = 285.0
     fixedR = True
     if fixedR:
         init = [P, phi1, lambda0, omega, gamma, mx, bx, my, by]
     else:
         init = [R, P, phi1, lambda0, omega, gamma, mx, bx, my, by]
 
-    if True:
+    if  True:
         solution, cov_sol, infodict, mesg, ier = opt.leastsq(
             lambda x: paramfn(x, datarad, fixedR), init,
             full_output=True, maxfev=11*1000,
             diag=([1.0]*(5 if fixedR else 6) + [1/100.0, 1/100., 1/100.0, 1/100.]),
             ftol=1e-10, xtol=1e-10, factor=.01)
         print ("Initial error (%g) -> final error (%g): solution:"
-               % tuple(map(lambda x: la.norm(paramfn(x, data, fixedR)),
+               % tuple(map(lambda x: la.norm(paramfn(x, datarad, fixedR)),
                            [init, solution])))
         paramprinter(solution, fixedR)
