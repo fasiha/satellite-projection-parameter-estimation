@@ -150,36 +150,51 @@ def plottest(data=None):
     else:
         latlong = np.array([(lat,lon) for (lon,lat) in np.deg2rad(data[:,:2])])
 
+    pixels=np.array([tilted_satellite_forward(R,P,phi1,lambda0,omega,gamma,
+                                           phi,lam)
+                     for (phi,lam) in latlong])
+
     import pylab
     import matplotlib.pyplot as plt
     pylab.ion()
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    pixels=np.array([tilted_satellite_forward(R,P,phi1,lambda0,omega,gamma,
-                                           phi,lam)
-                     for (phi,lam) in latlong])
-
     ax.plot(pixels[:,0], pixels[:,1],'bo')
-
-
     [ax.annotate("%g,%g"%tuple(ll.tolist()), xy=tuple(a.tolist()),
                  xytext=tuple(a.tolist()))
      for (a,ll) in zip(pixels, np.rad2deg(latlong))]
-
     plt.show()
 
     return (pixels, latlong)
 
+def imtest(data=None, im=None):
+    if data is None:
+        pixels = [[20,20], [40,40], [50,70]]
+        labels  = pixels
+    else:
+        pixels = data[:,2:]
+        labels = data[:,:2]
+    if im is None:
+        im = np.random.randn(100,100)
+    import pylab
+    import matplotlib.pyplot as plt
+    pylab.ion()
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.imshow(im)
+    [ax.annotate("%g,%g"%tuple(l), xy=tuple(p), xytext=tuple(p))
+     for (l,p) in zip(labels,pixels)]
+    plt.show()
 
 if __name__ == '__main__':
-    #data = loaddata(fname='data.csv')
-    data = loaddata(fname='tributary.csv')
+    data = loaddata(fname='data.csv')
+    #data = loaddata(fname='tributary.csv')
 
-    (theopix, theoll) = plottest(data)
+    # (theopix, theoll) = plottest(data)
 
     datarad = np.hstack((np.deg2rad(data[:,[1,0]]), data[:,2:]))
     R = 1.0
-    P = 1.91
+    P = 1.1
     phi1 = np.deg2rad(49.0) # lat
     lambda0 = np.deg2rad(26.0) # long
     omega = np.deg2rad(0.0) # tilt
@@ -191,6 +206,7 @@ if __name__ == '__main__':
     else:
         init = [R, P, phi1, lambda0, omega, gamma]
 
+    # Find parameters with minimum error
     if  True:
         solution, cov_sol, infodict, mesg, ier = opt.leastsq(
             lambda x: paramfn(x, datarad, fixedR), init,
@@ -201,3 +217,9 @@ if __name__ == '__main__':
                % tuple(map(lambda x: la.norm(paramfn(x, datarad, fixedR)),
                            [init, solution])))
         paramprinter(solution, fixedR)
+
+    # Display image with picked points
+    if True:
+        import matplotlib.pyplot as plt
+        im = plt.imread('1970022.jpg')
+        imtest(data, im)
