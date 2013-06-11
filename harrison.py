@@ -67,7 +67,7 @@ def tilted_satellite_forward(R, P, phi1, lambda0, omega, gamma, phi, lam):
     RP from the center of the Earth, perpendicularly over point (phi1,
     lambda0). The camera is horizontally turned to face gamma
     clockwise from north, and then tilted (90 degrees - omega)
-    downward from horizontal, "horizontal"" meaning parallel to a
+    downward from horizontal, "horizontal" meaning parallel to a
     plane tangent to the sphere at (phi1, lambda0). The photograph is
     then taken, placing points (phi, lam) in positions (xt, yt), based
     on a scale reduction in R.'
@@ -108,7 +108,7 @@ def paramfn(params, data, fixedR=False, returnerr=True):
         (R, P, phi1, lambda0, omega,gamma, mx, bx, my, by) = params
     xy = np.array([tilted_satellite_forward(R,P,phi1,lambda0,omega,gamma,
                                             phi,lam)
-                   for (lam,phi) in data[:,:2]])
+                   for (phi,lam) in data[:,:2]])
     pixel = scale_to_page(xy, mx, my, bx, by)
     if returnerr:
         return (pixel - data[:,2:]).ravel()
@@ -128,30 +128,69 @@ def paramprinter(x, fixedR=False):
     print "x scaling: pixelx = %g*x + %g" % (mx,bx)
     print "y scaling: pixely = %g*y + %g" % (my,by)
 
-if __name__ == '__main__':
-    data = loaddata(fname='data.csv')
+def plottest(data):
+    # Polar:
+    #R=1.0; P=9.9; phi1=np.deg2rad(90.0); lambda0=0.0; omega=0.0; gamma=0.0
+    #phivec = range(-0,90,10)
+    #lamvec = range(-180,180,45)
 
+    R=1.0; P=1.9; phi1=np.deg2rad(49.0); lambda0=np.deg2rad(26.0);
+    omega=np.deg2rad(0.0); gamma=np.deg2rad(-99.0)
+    phivec = range(30,91,15)
+    lamvec = range(-30,61,15)
+    phirad = np.deg2rad(np.array(phivec, dtype=float))
+    lamrad = np.deg2rad(np.array(lamvec, dtype=float))
+
+    import pylab
+    import matplotlib.pyplot as plt
+    pylab.ion()
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    pixels=np.array([tilted_satellite_forward(R,P,phi1,lambda0,omega,gamma,
+                                           phi,lam)
+                  for phi in phirad for lam in lamrad])
+    latlong = np.array([(phi,lam) for phi in phirad for lam in lamrad])
+    ax.plot(pixels[:,0], pixels[:,1],'bo')
+
+
+    [ax.annotate("%g,%g"%tuple(ll.tolist()), xy=tuple(a.tolist()),
+                 xytext=tuple(a.tolist()))
+     for (a,ll) in zip(pixels, np.rad2deg(latlong))]
+
+    plt.show()
+
+    return (pixels, latlong)
+
+
+if __name__ == '__main__':
+    (theopix, theoll) = plottest()
+    #data = loaddata(fname='data.csv')
+    data = loaddata(fname='tributary.csv')
+
+    datarad = np.hstack((np.deg2rad(data[:,[1,0]]), data[:,2:]))
     R = 1.0
-    P = 1.1
-    phi1 = np.deg2rad(-26.0)
-    lambda0 = np.deg2rad(-49.0)
-    omega = np.deg2rad(20.0)
-    gamma = np.deg2rad(-90.0)
-    mx = 1000.0
-    bx = 5000.0
-    my = 1000.0
-    by = 3000.0
+    P = 1.91
+    phi1 = np.deg2rad(49.0) # lat
+    lambda0 = np.deg2rad(26.0) # long
+    omega = np.deg2rad(0.0) # tilt
+    gamma = np.deg2rad(-99.0) # rot
+    mx = 459.0
+    bx = 310.0 # triburary width:620, height:513.8
+    my = 459.0
+    by = 257.0
     fixedR = True
     if fixedR:
         init = [P, phi1, lambda0, omega, gamma, mx, bx, my, by]
     else:
         init = [R, P, phi1, lambda0, omega, gamma, mx, bx, my, by]
-    solution, cov_sol, infodict, mesg, ier = opt.leastsq(
-        lambda x: paramfn(x, data, fixedR), init,
-        full_output=True, maxfev=11*1000,
-        diag=([1.0]*(5 if fixedR else 6) + [1/1000.0, 1/1000., 1/1000.0, 1/1000.]),
-        ftol=1e-10, xtol=1e-10)
-    print ("Initial error (%g) -> final error (%g): solution:"
-           % tuple(map(lambda x: la.norm(paramfn(x, data, fixedR)),
-                       [init, solution])))
-    paramprinter(solution, fixedR)
+
+    if True:
+        solution, cov_sol, infodict, mesg, ier = opt.leastsq(
+            lambda x: paramfn(x, datarad, fixedR), init,
+            full_output=True, maxfev=11*1000,
+            diag=([1.0]*(5 if fixedR else 6) + [1/100.0, 1/100., 1/100.0, 1/100.]),
+            ftol=1e-10, xtol=1e-10, factor=.01)
+        print ("Initial error (%g) -> final error (%g): solution:"
+               % tuple(map(lambda x: la.norm(paramfn(x, data, fixedR)),
+                           [init, solution])))
+        paramprinter(solution, fixedR)
