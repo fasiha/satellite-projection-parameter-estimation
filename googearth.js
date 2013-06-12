@@ -14,24 +14,33 @@ function initCB(instance) {
     var radius_of_earth = 6371e3; // meters
 
     // My estimate of Harrison's "Europe from the East"
-    var Peurope = 1.81;
+    var Peurope = 1.82;
     var lateurope = 55.9;
     var loneurope = 58.3;
-    var roleurope = 82.1;
-    var tileurope = -12.0;
+    var roleurope = -82.1;
+    var tileurope = 12.1;
 
     // Snyder's figure 37
     var Ps = 160e3 / radius_of_earth + 1.0;
     var lats = 41.0;
     var lons = -74.0;
-    var tils = 55;
-    var rols = 210;
+    var tils = 55; // omega
+    var rols = 210; // gamma
 
-    var P = Ps;
-    var lat = lats;
-    var lon = lons;
-    var til = tils;
-    var rol = rols;
+    if (1) {
+        var P = Peurope;
+        var lat = lateurope;
+        var lon = loneurope;
+        var til = tileurope;
+        var rol = roleurope;
+    } else {
+        var P = Ps;
+        var lat = lats;
+        var lon = lons;
+        var til = tils;
+        var rol = rols;
+    }
+
 
     var height = (P-1.0) * radius_of_earth;
 
@@ -40,7 +49,7 @@ function initCB(instance) {
     camera.setLongitude(lon);
     camera.setAltitude(height);
 
-    camera.setHeading(rols);
+    camera.setHeading(rol);
     camera.setTilt(til);
 
     ge.getView().setAbstractView(camera);
