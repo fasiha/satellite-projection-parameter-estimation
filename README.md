@@ -40,6 +40,20 @@ This implementation
 -------------------
 `harrison.py` in this repository implements the forward transform which converts lat/long into xy positions on a map, given the five parameters mentioned in the previous section, in Python. It also implements a parameter search (technically, a non-linear least squares function optimization, provided by [Scipy's `leastsq`]http://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.leastsq.html), which allows one to find these five parameters given a list of lat/longs with their associated xy points on a map.
 
-When I run `harrison.py` against the "Europe from the East" data samples, my 2009 Macbook Pro produces a result in a second. I'm in the process of validating the result with Tributary.io/D3 (see below) and Google Earth.
+When I run `harrison.py` against the "Europe from the East" data samples, my 2009 Macbook Pro produces a result in a second. The results, for sixteen lat/long/x/y-tuples in `data.csv` are:
+
+> R = 1, P = 1.82443 (-> H = 0.824428)
+> lat/long: (55.9175, 58.2941) deg
+> tilt/rot: (12.1078, -82.0505) deg
+
+Validation of the results with Tributary.io/D3 (see below) and Google Earth (see `googearth.html`) have been positive.
 
 Included with the Harrison map (`1970022.jpg`, obtained from the David Rumsey Map Collection, with lat/long/x/y truth data in `data.csv` (originally from `data.org`)) is a screenshot of my [Tributary.io inlet rendering a satellite projection using D3.geo](http://tributary.io/inlet/5654960) (`tributary.png` with data in `tributary.org` and `tributary.csv`; a backup of the inlet's Javascript is in `tributary.js`).
+
+Challenges and going forward
+----------------------------
+
+As mentioned above, validation of the projection parameters calculated using sixteen two-dimensional data points using the Google Earth Javascript API (open `googearth.html` in your local browser) has been positive. However, two major challenges remain:
+
+- Terrain. Harrison must have free-drawn the mountains, since they display extreme exaggeration. (To see this, recall that the projection places the camera 0.8 earth radii above the earth's surface, while Mount Everest is at most 0.001 earth radii above mean sea level. And yet in his [map](http://goo.gl/0C0T3), even the Atlas mountains in Morocco are towering over the curvature of the earth: totally unrealistic, but very artistic and educational.) In order to generate imagery with Harrison's level of vertical exaggeration, non-standard GIS techniques will have to be used (Google Earth limits the vertical exaggeration to three times).
+- Lens. Harrison could have used wide-angle or telephoto lenses to photograph his globe. Both projection-based and 3D renderers such as Google Earth seem to be limited to non-lensed ray tracing, thus incapable of capturing any useful lens-induced distortion. The small but annoying residual between the final calculated pixel locations and the actual pixel locations in Harrison's map may be due to unmodeled lens effects (indicating, indirectly, that the lens used might have been close to normal).
