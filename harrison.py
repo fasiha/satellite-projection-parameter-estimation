@@ -167,7 +167,7 @@ def plottest(data=None):
 
     return (pixels, latlong)
 
-def imtest(data=None, im=None):
+def imtest(data=None, im=None, final=None):
     if data is None:
         pixels = [[20,20], [40,40], [50,70]]
         labels  = pixels
@@ -182,8 +182,13 @@ def imtest(data=None, im=None):
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax.imshow(im)
-    [ax.annotate("%g,%g"%tuple(l), xy=tuple(p), xytext=tuple(p))
+    [ax.annotate("%g,%g"%tuple(l), xy=tuple(p), xytext=tuple(p),
+                 color='r', size=15)
      for (l,p) in zip(labels,pixels)]
+    if final is not None:
+        [ax.annotate("%g,%g"%tuple(l), xy=tuple(p), xytext=tuple(p),
+                     size=15, color='g')
+         for (l,p) in zip(labels,final)]
     plt.show()
 
 if __name__ == '__main__':
@@ -214,7 +219,10 @@ if __name__ == '__main__':
             diag=([1.0]*(5 if fixedR else 6)),
             ftol=1e-10, xtol=1e-10, factor=.01)
         print ("Initial error (%g) -> final error (%g): solution:"
-               % tuple(map(lambda x: la.norm(paramfn(x, datarad, fixedR)),
+               % tuple(map(lambda x: percent_error(
+                   paramfn(x, datarad, fixedR,
+                           False).ravel(),
+                   data[:,2:].ravel()),
                            [init, solution])))
         paramprinter(solution, fixedR)
 
@@ -222,4 +230,4 @@ if __name__ == '__main__':
     if True:
         import matplotlib.pyplot as plt
         im = plt.imread('1970022.jpg')
-        imtest(data, im)
+        imtest(data, im, paramfn(solution, datarad, fixedR, False))
