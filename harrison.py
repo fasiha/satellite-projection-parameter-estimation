@@ -202,7 +202,7 @@ if __name__ == '__main__':
     P = 1.1
     phi1 = np.deg2rad(49.0) # lat
     lambda0 = np.deg2rad(26.0) # long
-    omega = np.deg2rad(0.0) # tilt
+    omega = np.deg2rad(45.0) # tilt
     gamma = np.deg2rad(-99.0) # rot
     fixedR = True
 
