@@ -38,7 +38,7 @@ While at the United States Geological Survey, John Snyder wrote his 1987 opus, *
 
 This implementation
 -------------------
-`harrison.py` in this repository implements the forward transform which converts lat/long into xy positions on a map, given the five parameters mentioned in the previous section, in Python. It also implements a parameter search (technically, a non-linear least squares function optimization, provided by [Scipy's `leastsq`]http://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.leastsq.html), which allows one to find these five parameters given a list of lat/longs with their associated xy points on a map.
+`harrison.py` in this repository implements the forward transform which converts lat/long into xy positions on a map, given the five parameters mentioned in the previous section, in Python. It also implements a parameter search (technically, a non-linear least squares function optimization, provided by [Scipy's `leastsq`](http://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.leastsq.html), which allows one to find these five parameters given a list of lat/longs with their associated xy points on a map.
 
 When I run `harrison.py` against the "Europe from the East" data samples, my 2009 Macbook Pro produces a result in a second. The results, for sixteen lat/long/x/y-tuples in `data.csv` are:
 
